@@ -6,17 +6,22 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useJobStore } from '../../src/store';
 import JobCard from '../../src/components/JobCard';
+import OfflineIndicator from '../../src/components/OfflineIndicator';
 import { Job } from '../../src/types';
+
+type Filter = 'all' | 'active' | 'completed';
 
 export default function JobsScreen() {
   const router = useRouter();
-  const { jobs, isLoading, fetchJobs } = useJobStore();
+  const { jobs, isLoading, isOffline, pendingActions, fetchJobs, syncQueue } = useJobStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<Filter>('all');
 
   useEffect(() => {
     fetchJobs();
@@ -31,17 +36,45 @@ export default function JobsScreen() {
   const activeJobs = jobs.filter((j) => j.status !== 'completed');
   const completedJobs = jobs.filter((j) => j.status === 'completed');
 
+  const filteredJobs = filter === 'all'
+    ? jobs
+    : filter === 'active'
+      ? activeJobs
+      : completedJobs;
+
   const navigateJob = (job: Job) => {
     router.push(`/job/${job.id}`);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Offline Banner */}
+      <OfflineIndicator
+        isOffline={isOffline}
+        pendingActions={pendingActions}
+        onSync={syncQueue}
+      />
+
       <View style={styles.header}>
         <Text style={styles.title}>All Jobs</Text>
         <Text style={styles.count}>
           {activeJobs.length} active · {completedJobs.length} completed
         </Text>
+      </View>
+
+      {/* Filter Tabs */}
+      <View style={styles.filterRow}>
+        {(['all', 'active', 'completed'] as Filter[]).map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+              {f === 'all' ? `All (${jobs.length})` : f === 'active' ? `Active (${activeJobs.length})` : `Done (${completedJobs.length})`}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {isLoading && !refreshing ? (
@@ -50,7 +83,7 @@ export default function JobsScreen() {
         </View>
       ) : (
         <FlatList
-          data={jobs}
+          data={filteredJobs}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <JobCard job={item} onPress={() => navigateJob(item)} />
@@ -80,7 +113,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
   title: {
     fontSize: 28,
@@ -92,6 +125,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginTop: 2,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  filterBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+  },
+  filterBtnActive: {
+    backgroundColor: '#4f46e5',
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  filterTextActive: {
+    color: '#fff',
   },
   loadingContainer: {
     flex: 1,

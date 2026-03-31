@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Job, JobStatus } from '../types';
 import * as jobsApi from '../api/jobs';
-import { addToQueue, isConnected } from '../utils/offline';
+import { addToQueue, isConnected, getQueueLength } from '../utils/offline';
 import { syncOfflineActions } from '../utils/sync';
 
 interface JobState {
@@ -21,6 +21,7 @@ interface JobState {
   uploadPhoto: (jobId: number, uri: string) => Promise<void>;
   uploadSignature: (jobId: number, base64: string) => Promise<void>;
   syncQueue: () => Promise<void>;
+  refreshPendingCount: () => Promise<void>;
   setSelectedDate: (date: string) => void;
 }
 
@@ -80,12 +81,14 @@ export const useJobStore = create<JobState>((set, get) => ({
       if (online) {
         await jobsApi.updateJobStatus(jobId, status);
       } else {
-        addToQueue({ type: 'update_status', payload: { jobId, status } });
-        set((s) => ({ pendingActions: s.pendingActions + 1, isOffline: true }));
+        await addToQueue({ type: 'update_status', payload: { jobId, status } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
       }
     } catch {
-      addToQueue({ type: 'update_status', payload: { jobId, status } });
-      set((s) => ({ pendingActions: s.pendingActions + 1 }));
+      await addToQueue({ type: 'update_status', payload: { jobId, status } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
     }
   },
 
@@ -108,12 +111,14 @@ export const useJobStore = create<JobState>((set, get) => ({
       if (online) {
         await jobsApi.completeTask(jobId, taskId);
       } else {
-        addToQueue({ type: 'complete_task', payload: { jobId, taskId } });
-        set((s) => ({ pendingActions: s.pendingActions + 1, isOffline: true }));
+        await addToQueue({ type: 'complete_task', payload: { jobId, taskId } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
       }
     } catch {
-      addToQueue({ type: 'complete_task', payload: { jobId, taskId } });
-      set((s) => ({ pendingActions: s.pendingActions + 1 }));
+      await addToQueue({ type: 'complete_task', payload: { jobId, taskId } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
     }
   },
 
@@ -123,12 +128,14 @@ export const useJobStore = create<JobState>((set, get) => ({
       if (online) {
         await jobsApi.clockIn(jobId);
       } else {
-        addToQueue({ type: 'clock_in', payload: { jobId } });
-        set((s) => ({ pendingActions: s.pendingActions + 1, isOffline: true }));
+        await addToQueue({ type: 'clock_in', payload: { jobId } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
       }
     } catch {
-      addToQueue({ type: 'clock_in', payload: { jobId } });
-      set((s) => ({ pendingActions: s.pendingActions + 1 }));
+      await addToQueue({ type: 'clock_in', payload: { jobId } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
     }
   },
 
@@ -138,12 +145,14 @@ export const useJobStore = create<JobState>((set, get) => ({
       if (online) {
         await jobsApi.clockOut(jobId);
       } else {
-        addToQueue({ type: 'clock_out', payload: { jobId } });
-        set((s) => ({ pendingActions: s.pendingActions + 1, isOffline: true }));
+        await addToQueue({ type: 'clock_out', payload: { jobId } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
       }
     } catch {
-      addToQueue({ type: 'clock_out', payload: { jobId } });
-      set((s) => ({ pendingActions: s.pendingActions + 1 }));
+      await addToQueue({ type: 'clock_out', payload: { jobId } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
     }
   },
 
@@ -153,12 +162,14 @@ export const useJobStore = create<JobState>((set, get) => ({
       if (online) {
         await jobsApi.uploadPhoto(jobId, uri);
       } else {
-        addToQueue({ type: 'upload_photo', payload: { jobId, uri } });
-        set((s) => ({ pendingActions: s.pendingActions + 1, isOffline: true }));
+        await addToQueue({ type: 'upload_photo', payload: { jobId, uri } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
       }
     } catch {
-      addToQueue({ type: 'upload_photo', payload: { jobId, uri } });
-      set((s) => ({ pendingActions: s.pendingActions + 1 }));
+      await addToQueue({ type: 'upload_photo', payload: { jobId, uri } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
     }
   },
 
@@ -168,20 +179,28 @@ export const useJobStore = create<JobState>((set, get) => ({
       if (online) {
         await jobsApi.uploadSignature(jobId, base64);
       } else {
-        addToQueue({ type: 'upload_signature', payload: { jobId, base64 } });
-        set((s) => ({ pendingActions: s.pendingActions + 1, isOffline: true }));
+        await addToQueue({ type: 'upload_signature', payload: { jobId, base64 } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
       }
     } catch {
-      addToQueue({ type: 'upload_signature', payload: { jobId, base64 } });
-      set((s) => ({ pendingActions: s.pendingActions + 1 }));
+      await addToQueue({ type: 'upload_signature', payload: { jobId, base64 } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
     }
   },
 
   syncQueue: async () => {
     const result = await syncOfflineActions();
     if (result.success > 0) {
-      set((s) => ({ pendingActions: Math.max(0, s.pendingActions - result.success) }));
+      const count = await getQueueLength();
+      set({ pendingActions: count });
     }
+  },
+
+  refreshPendingCount: async () => {
+    const count = await getQueueLength();
+    set({ pendingActions: count });
   },
 
   setSelectedDate: (date: string) => set({ selectedDate: date }),

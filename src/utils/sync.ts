@@ -7,7 +7,7 @@ export async function syncOfflineActions(): Promise<SyncResult> {
   const online = await isConnected();
   if (!online) return { success: 0, failed: 0 };
 
-  const queue = getQueue();
+  const queue = await getQueue();
   let success = 0;
   let failed = 0;
 
@@ -45,7 +45,7 @@ export async function syncOfflineActions(): Promise<SyncResult> {
           );
           break;
       }
-      removeFromQueue(action.id);
+      await removeFromQueue(action.id);
       success++;
     } catch {
       failed++;
