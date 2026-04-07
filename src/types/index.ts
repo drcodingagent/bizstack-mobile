@@ -33,7 +33,8 @@ export type JobStatus = 'scheduled' | 'en_route' | 'in_progress' | 'completed';
 
 export interface Job {
   id: number;
-  title: string;
+  name: string;
+  job_number: string;
   description: string;
   status: JobStatus;
   scheduled_date: string;
@@ -43,11 +44,41 @@ export interface Job {
   line_items: LineItem[];
 }
 
-export interface ClockEntry {
+export interface AvailableJob {
   id: number;
-  job_id: number;
-  clock_in: string;
-  clock_out: string | null;
+  name: string;
+  job_number: string;
+  client_name: string;
+  scheduled_time: string | null;
+}
+
+export interface TimeClock {
+  id: number;
+  job_id: number | null;
+  user_id: number;
+  status: 'clocked_in' | 'on_break' | 'clocked_out';
+  work_status: 'traveling' | 'arrived' | 'working' | 'completed';
+  clock_in_at: string;
+  clock_out_at: string | null;
+  travel_started_at: string | null;
+  arrived_at: string | null;
+  work_started_at: string | null;
+  total_duration: number;
+  hourly_rate: number | null;
+  labor_cost: number | null;
+  approved: boolean | null;
+  notes: string | null;
+  user: User;
+  job: { id: number; name: string; job_number: string } | null;
+}
+
+export interface TimeSummary {
+  active_clock: TimeClock | null;
+  today_clocks: TimeClock[];
+  week_minutes: number;
+  week_hours: number;
+  available_jobs: AvailableJob[];
+  team_active: TimeClock[] | null;
 }
 
 export interface OfflineAction {

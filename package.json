@@ -19,6 +19,7 @@
     "expo-file-system": "^55.0.12",
     "expo-image-picker": "^55.0.14",
     "expo-linking": "~7.1.7",
+    "expo-location": "~18.1.5",
     "expo-router": "~4.0.21",
     "expo-secure-store": "^55.0.9",
     "expo-sqlite": "^55.0.11",

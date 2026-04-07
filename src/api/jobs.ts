@@ -23,12 +23,12 @@ export async function completeTask(jobId: number, taskId: number): Promise<Task>
 }
 
 export async function clockIn(jobId: number): Promise<ClockEntry> {
-  const response = await apiClient.post<ClockEntry>('/time_clock/clock_in', { job_id: jobId });
+  const response = await apiClient.post<ClockEntry>('/time_clocks/clock_in', { job_id: jobId });
   return response.data;
 }
 
 export async function clockOut(jobId: number): Promise<ClockEntry> {
-  const response = await apiClient.post<ClockEntry>('/time_clock/clock_out', { job_id: jobId });
+  const response = await apiClient.post<ClockEntry>('/time_clocks/clock_out', { job_id: jobId });
   return response.data;
 }
 
