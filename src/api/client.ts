@@ -1,7 +1,15 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+// API Base URL priority:
+// 1. EXPO_PUBLIC_API_URL env var (set in .env or EAS build)
+// 2. app.config.js extra.apiUrl (defaults to https://eoslog.com)
+// 3. localhost fallback for development
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  Constants.expoConfig?.extra?.apiUrl ||
+  'https://eoslog.com';
 
 const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
@@ -30,7 +38,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       await SecureStore.deleteItemAsync('auth_token');
-      // The auth store will handle navigation
+      // The auth store will handle navigation to login
     }
     return Promise.reject(error);
   }
