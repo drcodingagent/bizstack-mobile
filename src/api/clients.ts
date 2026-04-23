@@ -1,12 +1,16 @@
 import apiClient from './client';
-import { Client, Job } from '../types';
+import { Client } from '../types';
 
-export async function getClient(id: number): Promise<Client> {
-  const response = await apiClient.get<Client>(`/clients/${id}`);
-  return response.data;
+function unwrap<T>(response: { data: any }): T {
+  return (response.data?.data ?? response.data) as T;
 }
 
-export async function getClientJobs(id: number): Promise<Job[]> {
-  const response = await apiClient.get<Job[]>(`/clients/${id}/jobs`);
-  return response.data;
+export async function getClient(id: number): Promise<Client> {
+  const response = await apiClient.get(`/clients/${id}`);
+  return unwrap<Client>(response);
+}
+
+export async function getClientJobs(id: number): Promise<any[]> {
+  const response = await apiClient.get(`/clients/${id}/jobs`);
+  return unwrap<any[]>(response);
 }

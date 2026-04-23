@@ -40,6 +40,7 @@ export async function getStoredAuth(): Promise<{ token: string; user: User } | n
 }
 
 export async function getProfile(): Promise<User> {
-  const response = await apiClient.get<User>('/profile');
-  return response.data;
+  const response = await apiClient.get('/profile');
+  const payload = response.data?.data || response.data;
+  return payload as User;
 }

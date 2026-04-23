@@ -1,9 +1,12 @@
 import apiClient from './client';
-import { Notification } from '../types';
 
-export async function getNotifications(): Promise<Notification[]> {
-  const response = await apiClient.get<Notification[]>('/notifications');
-  return response.data;
+function unwrap<T>(response: { data: any }): T {
+  return (response.data?.data ?? response.data) as T;
+}
+
+export async function getNotifications(): Promise<any[]> {
+  const response = await apiClient.get('/notifications');
+  return unwrap<any[]>(response);
 }
 
 export async function markRead(id: number): Promise<void> {

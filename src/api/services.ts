@@ -1,7 +1,10 @@
 import apiClient from './client';
-import { Service } from '../types';
 
-export async function getServices(): Promise<Service[]> {
-  const response = await apiClient.get<Service[]>('/services');
-  return response.data;
+function unwrap<T>(response: { data: any }): T {
+  return (response.data?.data ?? response.data) as T;
+}
+
+export async function getServices(): Promise<any[]> {
+  const response = await apiClient.get('/services');
+  return unwrap<any[]>(response);
 }

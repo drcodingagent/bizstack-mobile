@@ -1,72 +1,70 @@
 import apiClient from './client';
-import { TimeClock, ApiResponse } from '../types';
+import { TimeClock, TimeSummary } from '../types';
 
-// ─── Summary & History ───────────────────────────────────────────────────────
+// Helper to unwrap Rails API response { success, data, message }
+function unwrap<T>(response: { data: any }): T {
+  return (response.data?.data ?? response.data) as T;
+}
 
-export async function getSummary(): Promise<TimeClock> {
-  const response = await apiClient.get<TimeClock>('/time_clocks/summary');
-  return response.data;
+export async function getSummary(): Promise<TimeSummary> {
+  const response = await apiClient.get('/time_clocks/summary');
+  return unwrap<TimeSummary>(response);
 }
 
 export async function getHistory(): Promise<TimeClock[]> {
-  const response = await apiClient.get<TimeClock[]>('/time_clocks');
-  return response.data;
-}
-
-// ─── Clock Actions ───────────────────────────────────────────────────────────
-
-interface LocationPayload {
-  lat: number;
-  lng: number;
-  accuracy?: number;
-}
-
-function locationParams(location?: LocationPayload) {
-  if (!location) return {};
-  const params: Record<string, unknown> = {
-    latitude: location.lat,
-    longitude: location.lng,
-  };
-  if (location.accuracy) params.accuracy = location.accuracy;
-  return params;
+  const response = await apiClient.get('/time_clocks');
+  return unwrap<TimeClock[]>(response);
 }
 
 export async function clockIn(
   jobId?: number,
-  location?: LocationPayload
+  location?: { lat: number; lng: number }
 ): Promise<TimeClock> {
   const payload: Record<string, unknown> = {};
   if (jobId) payload.job_id = jobId;
-  if (location) Object.assign(payload, locationParams(location));
-  const response = await apiClient.post<TimeClock>('/time_clocks/clock_in', payload);
-  return response.data;
+  if (location) {
+    payload.latitude = location.lat;
+    payload.longitude = location.lng;
+  }
+  const response = await apiClient.post('/time_clocks/clock_in', payload);
+  return unwrap<TimeClock>(response);
 }
 
-export async function markArrived(location?: LocationPayload): Promise<TimeClock> {
+export async function markArrived(
+  location?: { lat: number; lng: number }
+): Promise<TimeClock> {
   const payload: Record<string, unknown> = {};
-  if (location) Object.assign(payload, locationParams(location));
-  const response = await apiClient.post<TimeClock>('/time_clocks/mark_arrived', payload);
-  return response.data;
+  if (location) {
+    payload.latitude = location.lat;
+    payload.longitude = location.lng;
+  }
+  const response = await apiClient.post('/time_clocks/mark_arrived', payload);
+  return unwrap<TimeClock>(response);
 }
 
 export async function startWorking(): Promise<TimeClock> {
-  const response = await apiClient.post<TimeClock>('/time_clocks/start_working');
-  return response.data;
+  const response = await apiClient.post('/time_clocks/start_working');
+  return unwrap<TimeClock>(response);
 }
 
-export async function clockOut(location?: LocationPayload): Promise<TimeClock> {
+export async function clockOut(
+  location?: { lat: number; lng: number }
+): Promise<TimeClock> {
   const payload: Record<string, unknown> = {};
-  if (location) Object.assign(payload, locationParams(location));
-  const response = await apiClient.post<TimeClock>('/time_clocks/clock_out', payload);
-  return response.data;
+  if (location) {
+    payload.latitude = location.lat;
+    payload.longitude = location.lng;
+  }
+  const response = await apiClient.post('/time_clocks/clock_out', payload);
+  return unwrap<TimeClock>(response);
 }
 
 export async function onBreak(): Promise<TimeClock> {
-  const response = await apiClient.post<TimeClock>('/time_clocks/on_break');
-  return response.data;
+  const response = await apiClient.post('/time_clocks/on_break');
+  return unwrap<TimeClock>(response);
 }
 
 export async function offBreak(): Promise<TimeClock> {
-  const response = await apiClient.post<TimeClock>('/time_clocks/off_break');
-  return response.data;
+  const response = await apiClient.post('/time_clocks/off_break');
+  return unwrap<TimeClock>(response);
 }
