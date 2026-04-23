@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Vibration } from 'react-native';
 import { Task } from '../types';
 
 interface Props {
@@ -17,7 +16,7 @@ export default function TaskList({ tasks, onComplete, onPhoto, disabled }: Props
   const handleToggle = (task: Task) => {
     if (task.status === 'completed' || disabled) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Vibration.vibrate(10);
 
     Alert.alert(
       'Complete Task',
@@ -33,7 +32,7 @@ export default function TaskList({ tasks, onComplete, onPhoto, disabled }: Props
   };
 
   const handlePhoto = (task: Task) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Vibration.vibrate(10);
     onPhoto(task.id);
   };
 
