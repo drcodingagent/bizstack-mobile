@@ -44,6 +44,7 @@ export default {
       "expo-camera",
       "expo-image-picker",
       "expo-secure-store",
+      "expo-location",
       [
         "expo-sqlite",
         {

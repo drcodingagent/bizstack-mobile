@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as Location from 'expo-location';
-import { TimeClock, TimeSummary } from '../types';
+import { TimeClock } from '../types';
 import * as timeApi from '../api/timeTracking';
 
 async function getCurrentLocation(): Promise<{ lat: number; lng: number } | undefined> {
@@ -15,7 +15,7 @@ async function getCurrentLocation(): Promise<{ lat: number; lng: number } | unde
 }
 
 interface TimeState {
-  summary: TimeSummary | null;
+  summary: TimeClock | null;
   history: TimeClock[];
   isLoading: boolean;
   error: string | null;
@@ -28,7 +28,6 @@ interface TimeState {
   clockOut: () => Promise<void>;
   onBreak: () => Promise<void>;
   offBreak: () => Promise<void>;
-  addManualEntry: (params: { clock_in_at: string; clock_out_at: string; job_id?: number; notes?: string }) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -125,18 +124,6 @@ export const useTimeStore = create<TimeState>((set, get) => ({
       await get().fetchSummary();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to end break';
-      set({ error: message, isLoading: false });
-    }
-  },
-
-  addManualEntry: async (params) => {
-    set({ isLoading: true, error: null });
-    try {
-      await timeApi.createManualEntry(params);
-      await get().fetchSummary();
-      await get().fetchHistory();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to add entry';
       set({ error: message, isLoading: false });
     }
   },

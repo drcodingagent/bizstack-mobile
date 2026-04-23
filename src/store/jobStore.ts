@@ -15,10 +15,13 @@ interface JobState {
   fetchJobs: (date?: string) => Promise<void>;
   fetchJob: (id: number) => Promise<void>;
   updateStatus: (jobId: number, status: JobStatus) => Promise<void>;
+  startJob: (jobId: number) => Promise<void>;
+  completeJob: (jobId: number) => Promise<void>;
+  cancelJob: (jobId: number, reason: string) => Promise<void>;
+  sendOnMyWay: (jobId: number) => Promise<void>;
+  signoffJob: (jobId: number, signature: string, rating: number, feedback?: string) => Promise<void>;
   completeTask: (jobId: number, taskId: number) => Promise<void>;
-  clockIn: (jobId: number) => Promise<void>;
-  clockOut: (jobId: number) => Promise<void>;
-  uploadPhoto: (jobId: number, uri: string) => Promise<void>;
+  uploadPhoto: (jobId: number, uri: string, caption?: string) => Promise<void>;
   uploadSignature: (jobId: number, base64: string) => Promise<void>;
   syncQueue: () => Promise<void>;
   refreshPendingCount: () => Promise<void>;
@@ -56,7 +59,6 @@ export const useJobStore = create<JobState>((set, get) => ({
       const job = await jobsApi.getJob(id);
       set({ selectedJob: job, isOffline: false });
     } catch {
-      // Use cached job from jobs list if available
       const cached = get().jobs.find((j) => j.id === id);
       if (cached) set({ selectedJob: cached });
       set({ isOffline: true });
@@ -66,7 +68,6 @@ export const useJobStore = create<JobState>((set, get) => ({
   },
 
   updateStatus: async (jobId: number, status: JobStatus) => {
-    // Optimistic update
     const jobs = get().jobs.map((j) =>
       j.id === jobId ? { ...j, status } : j
     );
@@ -92,12 +93,108 @@ export const useJobStore = create<JobState>((set, get) => ({
     }
   },
 
+  startJob: async (jobId: number) => {
+    try {
+      const online = await isConnected();
+      if (online) {
+        await jobsApi.startJob(jobId);
+        await get().fetchJob(jobId);
+      } else {
+        await addToQueue({ type: 'update_status', payload: { jobId, status: 'in_progress' } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
+      }
+    } catch {
+      await addToQueue({ type: 'update_status', payload: { jobId, status: 'in_progress' } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
+    }
+  },
+
+  completeJob: async (jobId: number) => {
+    try {
+      const online = await isConnected();
+      if (online) {
+        await jobsApi.completeJob(jobId);
+        await get().fetchJob(jobId);
+      } else {
+        await addToQueue({ type: 'update_status', payload: { jobId, status: 'completed' } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
+      }
+    } catch {
+      await addToQueue({ type: 'update_status', payload: { jobId, status: 'completed' } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
+    }
+  },
+
+  cancelJob: async (jobId: number, reason: string) => {
+    try {
+      const online = await isConnected();
+      if (online) {
+        await jobsApi.cancelJob(jobId, reason);
+        await get().fetchJob(jobId);
+      } else {
+        await addToQueue({ type: 'update_status', payload: { jobId, status: 'cancelled' } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
+      }
+    } catch {
+      await addToQueue({ type: 'update_status', payload: { jobId, status: 'cancelled' } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
+    }
+  },
+
+  sendOnMyWay: async (jobId: number) => {
+    try {
+      const online = await isConnected();
+      if (online) {
+        await jobsApi.sendOnMyWay(jobId);
+      } else {
+        await addToQueue({ type: 'update_status', payload: { jobId, action: 'send_on_my_way' } });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
+      }
+    } catch {
+      await addToQueue({ type: 'update_status', payload: { jobId, action: 'send_on_my_way' } });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
+    }
+  },
+
+  signoffJob: async (jobId: number, signature: string, rating: number, feedback?: string) => {
+    try {
+      const online = await isConnected();
+      if (online) {
+        await jobsApi.signoffJob(jobId, signature, rating, feedback);
+        await get().fetchJob(jobId);
+      } else {
+        await addToQueue({
+          type: 'upload_signature',
+          payload: { jobId, signature, rating, feedback },
+        });
+        const count = await getQueueLength();
+        set({ pendingActions: count, isOffline: true });
+      }
+    } catch {
+      await addToQueue({
+        type: 'upload_signature',
+        payload: { jobId, signature, rating, feedback },
+      });
+      const count = await getQueueLength();
+      set({ pendingActions: count });
+    }
+  },
+
   completeTask: async (jobId: number, taskId: number) => {
-    // Optimistic update
     const updateTasks = (job: Job) => ({
       ...job,
       tasks: job.tasks.map((t) =>
-        t.id === taskId ? { ...t, completed: true, completed_at: new Date().toISOString() } : t
+        t.id === taskId
+          ? { ...t, status: 'completed' as const }
+          : t
       ),
     });
 
@@ -122,52 +219,18 @@ export const useJobStore = create<JobState>((set, get) => ({
     }
   },
 
-  clockIn: async (jobId: number) => {
+  uploadPhoto: async (jobId: number, uri: string, caption?: string) => {
     try {
       const online = await isConnected();
       if (online) {
-        await jobsApi.clockIn(jobId);
+        await jobsApi.uploadPhoto(jobId, uri, caption);
       } else {
-        await addToQueue({ type: 'clock_in', payload: { jobId } });
+        await addToQueue({ type: 'upload_photo', payload: { jobId, uri, caption } });
         const count = await getQueueLength();
         set({ pendingActions: count, isOffline: true });
       }
     } catch {
-      await addToQueue({ type: 'clock_in', payload: { jobId } });
-      const count = await getQueueLength();
-      set({ pendingActions: count });
-    }
-  },
-
-  clockOut: async (jobId: number) => {
-    try {
-      const online = await isConnected();
-      if (online) {
-        await jobsApi.clockOut(jobId);
-      } else {
-        await addToQueue({ type: 'clock_out', payload: { jobId } });
-        const count = await getQueueLength();
-        set({ pendingActions: count, isOffline: true });
-      }
-    } catch {
-      await addToQueue({ type: 'clock_out', payload: { jobId } });
-      const count = await getQueueLength();
-      set({ pendingActions: count });
-    }
-  },
-
-  uploadPhoto: async (jobId: number, uri: string) => {
-    try {
-      const online = await isConnected();
-      if (online) {
-        await jobsApi.uploadPhoto(jobId, uri);
-      } else {
-        await addToQueue({ type: 'upload_photo', payload: { jobId, uri } });
-        const count = await getQueueLength();
-        set({ pendingActions: count, isOffline: true });
-      }
-    } catch {
-      await addToQueue({ type: 'upload_photo', payload: { jobId, uri } });
+      await addToQueue({ type: 'upload_photo', payload: { jobId, uri, caption } });
       const count = await getQueueLength();
       set({ pendingActions: count });
     }

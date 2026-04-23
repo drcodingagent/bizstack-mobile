@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useJobStore } from '../../src/store';
+import { useJobStore, useTimeStore } from '../../src/store';
 import { JobStatus } from '../../src/types';
 import ClientCard from '../../src/components/ClientCard';
 import TaskList from '../../src/components/TaskList';
@@ -33,12 +33,12 @@ export default function JobDetailScreen() {
     fetchJob,
     updateStatus,
     completeTask,
-    clockIn,
-    clockOut,
     uploadPhoto,
     uploadSignature,
     syncQueue,
   } = useJobStore();
+
+  const { clockIn, clockOut } = useTimeStore();
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [showSignature, setShowSignature] = useState(false);

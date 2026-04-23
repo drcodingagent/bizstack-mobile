@@ -5,37 +5,15 @@ import { formatPhone } from '../utils/format';
 
 interface Props {
   client: Client;
+  onCall: () => void;
+  onEmail: () => void;
+  onNavigate: () => void;
 }
 
-export default function ClientCard({ client }: Props) {
-  const handleCall = () => {
-    if (client.phone) {
-      Linking.openURL(`tel:${client.phone}`);
-    }
-  };
-
-  const handleText = () => {
-    if (client.phone) {
-      Linking.openURL(`sms:${client.phone}`);
-    }
-  };
-
-  const handleEmail = () => {
-    if (client.email) {
-      Linking.openURL(`mailto:${client.email}`);
-    }
-  };
-
-  const handleDirections = () => {
-    if (client.address) {
-      const encoded = encodeURIComponent(client.address);
-      Linking.openURL(`https://maps.google.com/?q=${encoded}`);
-    }
-  };
-
+export default function ClientCard({ client, onCall, onEmail, onNavigate }: Props) {
   return (
     <View style={styles.container}>
-      {/* Name and email */}
+      {/* Header with avatar */}
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
@@ -50,7 +28,7 @@ export default function ClientCard({ client }: Props) {
         <View style={styles.headerInfo}>
           <Text style={styles.name}>{client.full_name}</Text>
           {client.email ? (
-            <TouchableOpacity onPress={handleEmail}>
+            <TouchableOpacity onPress={onEmail}>
               <Text style={styles.email}>{client.email}</Text>
             </TouchableOpacity>
           ) : null}
@@ -60,38 +38,38 @@ export default function ClientCard({ client }: Props) {
       {/* Action buttons */}
       <View style={styles.actions}>
         {client.phone ? (
-          <>
-            <TouchableOpacity style={styles.actionBtn} onPress={handleCall}>
-              <Text style={styles.actionIcon}>📞</Text>
-              <Text style={styles.actionText}>Call</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={handleText}>
-              <Text style={styles.actionIcon}>💬</Text>
-              <Text style={styles.actionText}>Text</Text>
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity style={styles.actionBtn} onPress={onCall}>
+            <Text style={styles.actionIcon}>📞</Text>
+            <Text style={styles.actionText}>Call</Text>
+          </TouchableOpacity>
+        ) : null}
+        {client.email ? (
+          <TouchableOpacity style={styles.actionBtn} onPress={onEmail}>
+            <Text style={styles.actionIcon}>✉️</Text>
+            <Text style={styles.actionText}>Email</Text>
+          </TouchableOpacity>
         ) : null}
         {client.address ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={handleDirections}>
+          <TouchableOpacity style={styles.actionBtn} onPress={onNavigate}>
             <Text style={styles.actionIcon}>🧭</Text>
-            <Text style={styles.actionText}>Directions</Text>
+            <Text style={styles.actionText}>Navigate</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
       {/* Address */}
       {client.address ? (
-        <View style={styles.addressRow}>
-          <Text style={styles.addressIcon}>📍</Text>
-          <Text style={styles.address}>{client.address}</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoIcon}>📍</Text>
+          <Text style={styles.infoText}>{client.address}</Text>
         </View>
       ) : null}
 
       {/* Phone */}
       {client.phone ? (
-        <View style={styles.phoneRow}>
-          <Text style={styles.phoneIcon}>📱</Text>
-          <Text style={styles.phone}>{formatPhone(client.phone)}</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoIcon}>📱</Text>
+          <Text style={styles.infoText}>{formatPhone(client.phone)}</Text>
         </View>
       ) : null}
     </View>
@@ -164,32 +142,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
   },
-  addressRow: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 6,
   },
-  addressIcon: {
+  infoIcon: {
     fontSize: 14,
     marginRight: 8,
     marginTop: 1,
   },
-  address: {
+  infoText: {
     fontSize: 14,
     color: '#6b7280',
     flex: 1,
     lineHeight: 20,
-  },
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  phoneIcon: {
-    fontSize: 14,
-    marginRight: 8,
-  },
-  phone: {
-    fontSize: 14,
-    color: '#6b7280',
   },
 });

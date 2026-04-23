@@ -45,8 +45,10 @@ export default function LoginScreen() {
     >
       <View style={styles.inner}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logo}>⚡</Text>
-          <Text style={styles.appName}>BizStack</Text>
+          <View style={styles.logoCircle}>
+            <Text style={styles.logoText}>E</Text>
+          </View>
+          <Text style={styles.appName}>Eos Log</Text>
           <Text style={styles.subtitle}>Field Worker App</Text>
         </View>
 
@@ -86,6 +88,8 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        <Text style={styles.version}>v1.0.0</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -105,9 +109,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
-  logo: {
-    fontSize: 56,
-    marginBottom: 8,
+  logoCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#4f46e5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoText: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '800',
   },
   appName: {
     fontSize: 32,
@@ -147,5 +161,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+  },
+  version: {
+    textAlign: 'center',
+    color: '#d1d5db',
+    fontSize: 12,
+    marginTop: 48,
   },
 });

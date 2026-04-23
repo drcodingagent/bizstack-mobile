@@ -15,9 +15,10 @@ import * as ImagePicker from 'expo-image-picker';
 interface Props {
   onPhotoTaken: (uri: string) => void;
   photos?: string[];
+  mode?: 'before' | 'after';
 }
 
-export default function PhotoCapture({ onPhotoTaken, photos = [] }: Props) {
+export default function PhotoCapture({ onPhotoTaken, photos = [], mode }: Props) {
   const [showCamera, setShowCamera] = useState(false);
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
@@ -70,13 +71,21 @@ export default function PhotoCapture({ onPhotoTaken, photos = [] }: Props) {
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.button} onPress={openCamera}>
           <Text style={styles.buttonIcon}>📷</Text>
-          <Text style={styles.buttonText}>Camera</Text>
+          <Text style={styles.buttonText}>
+            {mode === 'after' ? 'After Photo' : mode === 'before' ? 'Before Photo' : 'Camera'}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={pickFromGallery}>
           <Text style={styles.buttonIcon}>🖼️</Text>
           <Text style={styles.buttonText}>Gallery</Text>
         </TouchableOpacity>
       </View>
+
+      {photos.length > 0 && (
+        <View style={styles.photoInfo}>
+          <Text style={styles.photoCount}>{photos.length} photo{photos.length !== 1 ? 's' : ''}</Text>
+        </View>
+      )}
 
       {photos.length > 0 && (
         <View style={styles.previewRow}>
@@ -151,11 +160,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
   },
+  photoInfo: {
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  photoCount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
   previewRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 12,
+    marginTop: 8,
   },
   thumbnail: {
     width: 72,

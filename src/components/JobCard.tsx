@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Job } from '../types';
-import { formatTime, getStatusColor, getStatusLabel } from '../utils/format';
+import { formatTime } from '../utils/format';
+import StatusBadge from './StatusBadge';
 
 interface Props {
   job: Job;
@@ -9,33 +10,41 @@ interface Props {
 }
 
 export default function JobCard({ job, onPress }: Props) {
-  const statusColor = getStatusColor(job.status);
-  const completedCount = job.tasks.filter((t) => t.completed).length;
+  const completedCount = job.tasks.filter((t) => t.status === 'completed').length;
   const totalCount = job.tasks.length;
+
+  const formatAddress = (address: string) => {
+    if (address.length > 40) {
+      return address.substring(0, 37) + '...';
+    }
+    return address;
+  };
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.header}>
-        <Text style={styles.time}>{formatTime(job.scheduled_start_time)}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusText, { color: statusColor }]}>
-            {getStatusLabel(job.status)}
-          </Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.jobNumber}>#{job.job_number}</Text>
+          {job.scheduled_start_time && (
+            <Text style={styles.time}>{formatTime(job.scheduled_start_time)}</Text>
+          )}
         </View>
+        <StatusBadge status={job.status} size="sm" />
       </View>
 
+      <Text style={styles.title} numberOfLines={1}>{job.title || job.name}</Text>
       <Text style={styles.clientName}>{job.client.full_name}</Text>
-      <Text style={styles.title} numberOfLines={1}>{job.title}</Text>
 
       <View style={styles.footer}>
         <Text style={styles.address} numberOfLines={1}>
-          📍 {job.client.address}
+          📍 {formatAddress(job.client.address)}
         </Text>
         {totalCount > 0 && (
-          <Text style={styles.tasks}>
-            ✅ {completedCount}/{totalCount}
-          </Text>
+          <View style={styles.taskCount}>
+            <Text style={styles.taskCountText}>
+              {completedCount}/{totalCount}
+            </Text>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -59,37 +68,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  jobNumber: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9ca3af',
   },
   time: {
     fontSize: 14,
     fontWeight: '600',
     color: '#4f46e5',
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  clientName: {
-    fontSize: 17,
+  title: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  title: {
+  clientName: {
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 10,
@@ -105,9 +107,15 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
-  tasks: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#10b981',
+  taskCount: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  taskCountText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
   },
 });
