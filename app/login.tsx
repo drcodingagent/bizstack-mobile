@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store';
 
 export default function LoginScreen() {
@@ -17,6 +18,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuthStore();
+  const router = useRouter();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -27,6 +29,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim(), password);
+      router.replace('/tabs');
     } catch (e: any) {
       const message = e?.response?.data?.error || 'Login failed. Please check your credentials.';
       Alert.alert('Login Error', message);

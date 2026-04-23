@@ -1,15 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
+  const router = useRouter();
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: logout },
+      { text: 'Logout', style: 'destructive', onPress: async () => {
+        await logout();
+        router.replace('/login');
+      }},
     ]);
   };
 
