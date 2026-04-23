@@ -7,8 +7,8 @@ import {
   Animated,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 
 interface Props {
   status: 'clocked_out' | 'clocked_in' | 'on_break';
@@ -94,14 +94,17 @@ export default function ClockButton({ status, workStatus, onPress, loading }: Pr
   }, [status, workStatus]);
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Simple vibration feedback (no expo-haptics dependency)
+    try {
+      const { Vibration } = require('react-native');
+      Vibration.vibrate(10);
+    } catch {}
 
     const actions = getActions();
 
     if (actions.length === 1) {
       // Single action — confirm if destructive
       if (actions[0].destructive) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         onPress(actions[0].action);
       } else {
         onPress(actions[0].action);
