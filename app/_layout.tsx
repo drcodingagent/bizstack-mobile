@@ -1,29 +1,15 @@
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../src/store';
 
 export default function RootLayout() {
   const { isAuthenticated, isLoading, loadStoredAuth } = useAuthStore();
-  const segments = useSegments();
-  const router = useRouter();
 
   useEffect(() => {
     loadStoredAuth();
   }, []);
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    const inAuthGroup = segments[0] === '(auth)';
-
-    if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/schedule');
-    }
-  }, [isAuthenticated, isLoading, segments]);
 
   if (isLoading) {
     return (
@@ -36,7 +22,11 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="dark" />
-      <Slot />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" />
+        <Stack.Screen name="tabs" />
+        <Stack.Screen name="job/[id]" />
+      </Stack>
     </>
   );
 }

@@ -3,8 +3,16 @@ import * as SecureStore from 'expo-secure-store';
 import { AuthResponse, User } from '../types';
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>('/auth/login', { email, password });
-  const { token, user } = response.data;
+  const response = await apiClient.post('/auth/login', { email, password });
+
+  // Rails wraps in { status: "success", data: { user, jwt_token }, message: "..." }
+  const payload = response.data?.data || response.data;
+  const token = payload?.jwt_token || payload?.token;
+  const user = payload?.user;
+
+  if (!token || !user) {
+    throw new Error('Invalid login response');
+  }
 
   await SecureStore.setItemAsync('auth_token', token);
   await SecureStore.setItemAsync('user_data', JSON.stringify(user));

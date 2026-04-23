@@ -13,8 +13,9 @@ export default function Index() {
 
   useEffect(() => {
     if (isLoading) return;
+
     if (isAuthenticated) {
-      router.replace('/schedule');
+      router.replace('/tabs');
     } else {
       router.replace('/login');
     }
