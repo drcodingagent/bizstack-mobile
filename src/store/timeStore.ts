@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as Location from 'expo-location';
-import { TimeClock } from '../types';
+import { TimeClock, TimeSummary } from '../types';
 import * as timeApi from '../api/timeTracking';
 
 async function getCurrentLocation(): Promise<{ lat: number; lng: number } | undefined> {
@@ -15,7 +15,7 @@ async function getCurrentLocation(): Promise<{ lat: number; lng: number } | unde
 }
 
 interface TimeState {
-  summary: TimeClock | null;
+  summary: TimeSummary | null;
   history: TimeClock[];
   isLoading: boolean;
   error: string | null;

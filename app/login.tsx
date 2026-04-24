@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  ActivityIndicator,
+  StyleSheet,
+  TextInput,
+  View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store';
+import { Button, Text } from '../src/components/ui';
+import { colors, radii, spacing } from '../src/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -22,7 +21,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter email and password');
+      Alert.alert('Sign in', 'Enter your email and password.');
       return;
     }
 
@@ -31,8 +30,8 @@ export default function LoginScreen() {
       await login(email.trim(), password);
       router.replace('/tabs');
     } catch (e: any) {
-      const message = e?.response?.data?.error || 'Login failed. Please check your credentials.';
-      Alert.alert('Login Error', message);
+      const message = e?.response?.data?.error || 'Login failed. Check your credentials.';
+      Alert.alert('Sign in', message);
     } finally {
       setLoading(false);
     }
@@ -44,52 +43,67 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.inner}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>E</Text>
+        <View style={styles.brand}>
+          <View style={styles.logo}>
+            <Text variant="h1" color={colors.onBrand}>
+              E
+            </Text>
           </View>
-          <Text style={styles.appName}>Eos Log</Text>
-          <Text style={styles.subtitle}>Field Worker App</Text>
+          <Text variant="display" style={{ marginTop: spacing.xl }}>
+            Eos Log
+          </Text>
+          <Text variant="body" color={colors.textSecondary} style={{ marginTop: 4 }}>
+            Field Worker
+          </Text>
         </View>
 
         <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#9ca3af"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            returnKeyType="next"
-          />
+          <View>
+            <Text variant="caption" color={colors.textSecondary} style={{ marginBottom: 6 }}>
+              Email
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="you@work.com"
+              placeholderTextColor={colors.textMuted}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              returnKeyType="next"
+            />
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#9ca3af"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            returnKeyType="done"
-            onSubmitEditing={handleLogin}
-          />
+          <View>
+            <Text variant="caption" color={colors.textSecondary} style={{ marginBottom: 6 }}>
+              Password
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+            />
+          </View>
 
-          <TouchableOpacity
-            style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+          <Button
+            label="Sign in"
             onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginBtnText}>Login</Text>
-            )}
-          </TouchableOpacity>
+            loading={loading}
+            size="xl"
+            fullWidth
+            style={{ marginTop: spacing.md }}
+          />
         </View>
 
-        <Text style={styles.version}>v1.0.0</Text>
+        <Text variant="caption" color={colors.textMuted} style={styles.version}>
+          v1.0.0
+        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -98,74 +112,40 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.bg,
   },
   inner: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing['3xl'],
   },
-  logoContainer: {
+  brand: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: spacing['4xl'],
   },
-  logoCircle: {
+  logo: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#4f46e5',
-    justifyContent: 'center',
+    backgroundColor: colors.brand,
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  logoText: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  appName: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#4f46e5',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#6b7280',
-    marginTop: 4,
+    justifyContent: 'center',
   },
   form: {
-    gap: 16,
+    gap: spacing.lg,
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     fontSize: 16,
-    color: '#111827',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  loginBtn: {
-    backgroundColor: '#4f46e5',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  loginBtnDisabled: {
-    opacity: 0.6,
-  },
-  loginBtnText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+    color: colors.textPrimary,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   version: {
     textAlign: 'center',
-    color: '#d1d5db',
-    fontSize: 12,
-    marginTop: 48,
+    marginTop: spacing['4xl'],
   },
 });

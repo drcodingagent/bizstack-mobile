@@ -1,5 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, radii, spacing } from '../theme';
+import { Text } from './ui';
 
 interface Props {
   isOffline: boolean;
@@ -10,22 +13,28 @@ interface Props {
 export default function OfflineIndicator({ isOffline, pendingActions, onSync }: Props) {
   if (!isOffline && pendingActions === 0) return null;
 
+  const text = isOffline
+    ? "You're offline — changes will sync later"
+    : `${pendingActions} ${pendingActions === 1 ? 'change' : 'changes'} pending sync`;
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.icon}>
-          {isOffline ? '📡' : '⏳'}
-        </Text>
-        <Text style={styles.text}>
-          {isOffline
-            ? "You're offline"
-            : `${pendingActions} action${pendingActions > 1 ? 's' : ''} pending`}
+        <Ionicons
+          name={isOffline ? 'cloud-offline-outline' : 'sync-outline'}
+          size={16}
+          color={colors.warning}
+        />
+        <Text variant="caption" color={colors.warning} style={{ fontWeight: '600' }}>
+          {text}
         </Text>
       </View>
       {!isOffline && pendingActions > 0 && onSync && (
-        <TouchableOpacity style={styles.syncBtn} onPress={onSync}>
-          <Text style={styles.syncBtnText}>Sync Now</Text>
-        </TouchableOpacity>
+        <Pressable onPress={onSync} style={styles.syncBtn}>
+          <Text variant="caption" color={colors.onBrand} style={{ fontWeight: '700' }}>
+            Sync Now
+          </Text>
+        </Pressable>
       )}
     </View>
   );
@@ -36,32 +45,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fef3c7',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    backgroundColor: colors.warningSoft,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  icon: {
-    fontSize: 16,
-  },
-  text: {
-    color: '#92400e',
-    fontSize: 13,
-    fontWeight: '600',
+    flex: 1,
   },
   syncBtn: {
-    backgroundColor: '#f59e0b',
-    paddingHorizontal: 12,
+    backgroundColor: colors.warning,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
-  },
-  syncBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
+    borderRadius: radii.pill,
   },
 });

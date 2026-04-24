@@ -1,83 +1,41 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   FlatList,
+  Pressable,
   RefreshControl,
-  ActivityIndicator,
-  TouchableOpacity,
+  StyleSheet,
   TextInput,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Screen, Text, Pill } from '../../src/components/ui';
 import { useJobStore } from '../../src/store/jobStore';
 import { Job } from '../../src/types';
-import { formatTime, getStatusColor, getStatusLabel } from '../../src/utils/format';
+import { colors, radii, spacing, jobStatusColor, jobStatusLabel } from '../../src/theme';
+import { formatTime } from '../../src/utils/format';
 
 type Filter = 'all' | 'scheduled' | 'in_progress' | 'completed';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'scheduled', label: 'Scheduled' },
-  { key: 'in_progress', label: 'In Progress' },
-  { key: 'completed', label: 'Completed' },
+  { key: 'scheduled', label: 'Upcoming' },
+  { key: 'in_progress', label: 'Active' },
+  { key: 'completed', label: 'Done' },
 ];
-
-// ─── Job Card ───────────────────────────────────────────────────────────────
-
-function JobRow({ job, onPress }: { job: Job; onPress: () => void }) {
-  const statusColor = getStatusColor(job.status);
-  const completedCount = job.tasks.filter((t) => t.completed).length;
-  const totalCount = job.tasks.length;
-
-  return (
-    <TouchableOpacity style={styles.jobRow} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.jobRowLeft}>
-        <View style={styles.jobRowTop}>
-          <Text style={styles.jobRowTitle} numberOfLines={1}>{job.title}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {getStatusLabel(job.status)}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.jobRowClient}>{job.client.full_name}</Text>
-        <View style={styles.jobRowMeta}>
-          <Text style={styles.jobRowAddress} numberOfLines={1}>
-            📍 {job.job_address.street}
-          </Text>
-          <Text style={styles.jobRowNumber}>#{job.job_number}</Text>
-        </View>
-        <View style={styles.jobRowBottom}>
-          <Text style={styles.jobRowDate}>
-            {job.scheduled_date}
-            {job.scheduled_start_time ? ` · ${formatTime(job.scheduled_start_time)}` : ''}
-          </Text>
-          {totalCount > 0 && (
-            <Text style={styles.jobRowTasks}>✅ {completedCount}/{totalCount}</Text>
-          )}
-        </View>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
-    </TouchableOpacity>
-  );
-}
-
-// ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function JobsScreen() {
   const router = useRouter();
-  const { jobs, isLoading, isOffline, pendingActions, fetchJobs, syncQueue } = useJobStore();
+  const { jobs, fetchJobs } = useJobStore();
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchJobs();
+    }, [])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -85,10 +43,10 @@ export default function JobsScreen() {
     setRefreshing(false);
   }, []);
 
-  const filteredJobs = jobs
+  const filtered = jobs
     .filter((j) => {
       if (filter === 'all') return true;
-      if (filter === 'in_progress') return j.status === 'in_progress' || j.status === 'en_route';
+      if (filter === 'scheduled') return j.status === 'scheduled' || j.status === 'new';
       return j.status === filter;
     })
     .filter((j) => {
@@ -106,268 +64,231 @@ export default function JobsScreen() {
       return b.scheduled_date.localeCompare(a.scheduled_date);
     });
 
-  const filterCounts = {
+  const counts = {
     all: jobs.length,
-    scheduled: jobs.filter((j) => j.status === 'scheduled').length,
-    in_progress: jobs.filter((j) => j.status === 'in_progress' || j.status === 'en_route').length,
+    scheduled: jobs.filter((j) => j.status === 'scheduled' || j.status === 'new').length,
+    in_progress: jobs.filter((j) => j.status === 'in_progress').length,
     completed: jobs.filter((j) => j.status === 'completed').length,
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+    <Screen>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>All Jobs</Text>
+        <Text variant="caption" color={colors.textTertiary}>
+          ALL JOBS
+        </Text>
+        <Text variant="h1" style={{ marginTop: 2 }}>
+          Jobs
+        </Text>
       </View>
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={18} color="#9ca3af" style={styles.searchIcon} />
+      <View style={styles.searchBar}>
+        <Ionicons name="search" size={18} color={colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search jobs, clients..."
-          placeholderTextColor="#9ca3af"
+          placeholder="Search jobs, clients…"
+          placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
           autoCapitalize="none"
           returnKeyType="search"
         />
         {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')} style={styles.searchClear}>
-            <Ionicons name="close-circle" size={18} color="#9ca3af" />
-          </TouchableOpacity>
+          <Pressable onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+          </Pressable>
         )}
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.filterRow}>
-        {FILTERS.map((f) => (
-          <TouchableOpacity
-            key={f.key}
-            style={[styles.filterBtn, filter === f.key && styles.filterBtnActive]}
-            onPress={() => setFilter(f.key)}
-          >
-            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
-              {f.label} ({filterCounts[f.key]})
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Job List */}
-      {isLoading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4f46e5" />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredJobs}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <JobRow job={item} onPress={() => router.push(`/job/${item.id}`)} />
-          )}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4f46e5" />
-          }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>💼</Text>
-              <Text style={styles.emptyTitle}>No jobs found</Text>
-              <Text style={styles.emptySubtitle}>
-                {search ? 'Try a different search' : 'Pull down to refresh'}
+      <FlatList
+        data={FILTERS}
+        keyExtractor={(f) => f.key}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterBar}
+        renderItem={({ item: f }) => {
+          const active = filter === f.key;
+          return (
+            <Pressable
+              onPress={() => setFilter(f.key)}
+              style={[styles.chip, active && styles.chipActive]}
+            >
+              <Text
+                variant="caption"
+                color={active ? colors.onBrand : colors.textSecondary}
+                style={{ fontWeight: '600' }}
+              >
+                {f.label} · {counts[f.key]}
               </Text>
+            </Pressable>
+          );
+        }}
+        style={{ flexGrow: 0 }}
+      />
+
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => (
+          <JobRow job={item} onPress={() => router.push(`/job/${item.id}`)} />
+        )}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
+        }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <View style={styles.emptyCircle}>
+              <Ionicons name="briefcase-outline" size={24} color={colors.textTertiary} />
             </View>
-          }
-        />
-      )}
-    </SafeAreaView>
+            <Text variant="h3" style={{ marginTop: spacing.md }}>
+              No jobs found
+            </Text>
+            <Text variant="bodySm" color={colors.textSecondary} style={{ marginTop: 2 }}>
+              {search ? 'Try a different search.' : 'Pull down to refresh.'}
+            </Text>
+          </View>
+        }
+      />
+    </Screen>
   );
 }
 
-// ─── Styles ────────────────────────────────────────────────────────────────
+function JobRow({ job, onPress }: { job: Job; onPress: () => void }) {
+  const total = job.tasks.length;
+  const done = job.tasks.filter((t) => t.status === 'completed').length;
+  const statusColor = jobStatusColor(job.status);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
+    >
+      <View style={[styles.rowAccent, { backgroundColor: statusColor }]} />
+      <View style={styles.rowBody}>
+        <View style={styles.rowTop}>
+          <Text variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>
+            {job.title}
+          </Text>
+          <Pill label={jobStatusLabel(job.status)} color={statusColor} size="sm" />
+        </View>
+        <Text variant="bodySm" color={colors.textSecondary} numberOfLines={1}>
+          {job.client.full_name}
+        </Text>
+        <View style={styles.rowMeta}>
+          <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+          <Text variant="caption" color={colors.textTertiary} numberOfLines={1} style={{ flex: 1 }}>
+            {job.job_address.street}, {job.job_address.city}
+          </Text>
+          <Text variant="caption" color={colors.textTertiary}>
+            #{job.job_number}
+          </Text>
+        </View>
+        <View style={styles.rowFooter}>
+          <Text variant="caption" color={colors.textSecondary}>
+            {job.scheduled_date}
+            {job.scheduled_start_time ? ` · ${formatTime(job.scheduled_start_time)}` : ''}
+          </Text>
+          {total > 0 && (
+            <Text variant="caption" color={done === total ? colors.success : colors.textSecondary}>
+              {done}/{total} tasks
+            </Text>
+          )}
+        </View>
+      </View>
+    </Pressable>
+  );
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-    letterSpacing: -0.5,
-  },
-
-  // Search
-  searchContainer: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  searchIcon: {
-    marginLeft: 12,
+    marginHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    gap: 8,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   searchInput: {
     flex: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
     fontSize: 15,
-    color: '#111827',
+    color: colors.textPrimary,
+    padding: 0,
   },
-  searchClear: {
-    paddingRight: 12,
+  filterBar: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
   },
-
-  // Filters
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    gap: 8,
-  },
-  filterBtn: {
+  chip: {
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
-  filterBtnActive: {
-    backgroundColor: '#4f46e5',
+  chipActive: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
   },
-  filterText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
-  filterTextActive: {
-    color: '#fff',
-  },
-
-  // List
   list: {
-    paddingBottom: 24,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['3xl'],
   },
-  loadingContainer: {
+  row: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  rowAccent: {
+    width: 4,
+  },
+  rowBody: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: spacing.md,
+    gap: 2,
   },
-
-  // Job Row
-  jobRow: {
+  rowTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginHorizontal: 16,
-    marginVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    gap: spacing.sm,
   },
-  jobRowLeft: {
-    flex: 1,
-    marginRight: 8,
-  },
-  jobRowTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 3,
-  },
-  jobRowTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    flex: 1,
-    marginRight: 8,
-  },
-  statusBadge: {
+  rowMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 8,
     gap: 4,
+    marginTop: 2,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  jobRowClient: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 3,
-  },
-  jobRowMeta: {
+  rowFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 6,
   },
-  jobRowAddress: {
-    fontSize: 12,
-    color: '#9ca3af',
-    flex: 1,
-    marginRight: 8,
-  },
-  jobRowNumber: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#9ca3af',
-  },
-  jobRowBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  jobRowDate: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  jobRowTasks: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#10b981',
-  },
-
-  // Empty
   empty: {
     alignItems: 'center',
-    paddingTop: 80,
-    paddingHorizontal: 32,
+    paddingTop: spacing['4xl'],
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#9ca3af',
+  emptyCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -41,22 +41,4 @@ export function getTodayISO(): string {
   return `${year}-${month}-${day}`;
 }
 
-export function getStatusColor(status: string): string {
-  const colors: Record<string, string> = {
-    scheduled: '#6366f1',
-    en_route: '#f59e0b',
-    in_progress: '#3b82f6',
-    completed: '#10b981',
-  };
-  return colors[status] || '#6b7280';
-}
-
-export function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    scheduled: 'Scheduled',
-    en_route: 'En Route',
-    in_progress: 'In Progress',
-    completed: 'Completed',
-  };
-  return labels[status] || status;
-}
+export { jobStatusColor as getStatusColor, jobStatusLabel as getStatusLabel } from '../theme';

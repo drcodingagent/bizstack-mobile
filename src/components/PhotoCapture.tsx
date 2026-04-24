@@ -1,42 +1,42 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
+  ActivityIndicator,
   Alert,
   Modal,
-  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+import { Text } from './ui';
+import { colors, spacing } from '../theme';
 
 interface Props {
-  onPhotoTaken: (uri: string) => void;
-  photos?: string[];
-  mode?: 'before' | 'after';
+  visible: boolean;
+  onClose: () => void;
+  onCapture: (uri: string) => void;
 }
 
-export default function PhotoCapture({ onPhotoTaken, photos = [], mode }: Props) {
-  const [showCamera, setShowCamera] = useState(false);
+export default function PhotoCapture({ visible, onClose, onCapture }: Props) {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
-  const openCamera = async () => {
-    if (!permission?.granted) {
-      const result = await requestPermission();
-      if (!result.granted) {
-        Alert.alert('Permission Required', 'Camera access is needed to take photos.');
-        return;
-      }
+  const handleOpenGallery = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      onCapture(result.assets[0].uri);
+      onClose();
     }
-    setShowCamera(true);
   };
 
-  const takePhoto = async () => {
+  const handleCapture = async () => {
     if (!cameraRef.current || isCapturing) return;
     setIsCapturing(true);
     try {
@@ -45,198 +45,149 @@ export default function PhotoCapture({ onPhotoTaken, photos = [], mode }: Props)
         base64: false,
       });
       if (photo?.uri) {
-        onPhotoTaken(photo.uri);
-        setShowCamera(false);
+        onCapture(photo.uri);
+        onClose();
       }
-    } catch (e) {
-      Alert.alert('Error', 'Failed to take photo');
+    } catch {
+      Alert.alert('Error', 'Could not take photo.');
     } finally {
       setIsCapturing(false);
     }
   };
 
-  const pickFromGallery = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-    });
+  if (!permission) {
+    return null;
+  }
 
-    if (!result.canceled && result.assets[0]) {
-      onPhotoTaken(result.assets[0].uri);
-    }
-  };
+  const grantedPerms = permission.granted;
 
   return (
-    <View>
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.button} onPress={openCamera}>
-          <Text style={styles.buttonIcon}>📷</Text>
-          <Text style={styles.buttonText}>
-            {mode === 'after' ? 'After Photo' : mode === 'before' ? 'Before Photo' : 'Camera'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={pickFromGallery}>
-          <Text style={styles.buttonIcon}>🖼️</Text>
-          <Text style={styles.buttonText}>Gallery</Text>
-        </TouchableOpacity>
-      </View>
-
-      {photos.length > 0 && (
-        <View style={styles.photoInfo}>
-          <Text style={styles.photoCount}>{photos.length} photo{photos.length !== 1 ? 's' : ''}</Text>
-        </View>
-      )}
-
-      {photos.length > 0 && (
-        <View style={styles.previewRow}>
-          {photos.map((uri, i) => (
-            <Image key={i} source={{ uri }} style={styles.thumbnail} />
-          ))}
-        </View>
-      )}
-
-      {/* Camera Modal */}
-      <Modal visible={showCamera} animationType="slide" statusBarTranslucent>
-        <View style={styles.cameraContainer}>
-          <CameraView
-            ref={cameraRef}
-            style={styles.camera}
-            facing={facing}
-          >
-            <View style={styles.cameraControls}>
-              <TouchableOpacity
-                style={styles.closeBtn}
-                onPress={() => setShowCamera(false)}
-              >
-                <Text style={styles.closeBtnText}>✕</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.captureBtn}
-                onPress={takePhoto}
+    <Modal visible={visible} animationType="slide" statusBarTranslucent>
+      <View style={styles.container}>
+        {!grantedPerms ? (
+          <View style={styles.permGate}>
+            <Ionicons name="camera-outline" size={48} color="#fff" />
+            <Text variant="h2" color="#fff" style={{ marginTop: spacing.lg, textAlign: 'center' }}>
+              Camera access needed
+            </Text>
+            <Text variant="body" color="rgba(255,255,255,0.8)" style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+              Grant permission to take photos for this job.
+            </Text>
+            <Pressable
+              onPress={requestPermission}
+              style={({ pressed }) => [styles.permBtn, pressed && { opacity: 0.85 }]}
+            >
+              <Text variant="bodyStrong" color="#000">Grant access</Text>
+            </Pressable>
+            <Pressable onPress={onClose} style={{ marginTop: spacing.lg }}>
+              <Text variant="body" color="rgba(255,255,255,0.8)">Cancel</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
+            <View style={styles.topBar}>
+              <RoundButton icon="close" onPress={onClose} />
+              <RoundButton
+                icon="camera-reverse"
+                onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+              />
+            </View>
+            <View style={styles.bottomBar}>
+              <Pressable onPress={handleOpenGallery} style={styles.galleryBtn}>
+                <Ionicons name="images" size={24} color="#fff" />
+              </Pressable>
+              <Pressable
+                onPress={handleCapture}
                 disabled={isCapturing}
+                style={({ pressed }) => [styles.shutter, pressed && { transform: [{ scale: 0.95 }] }]}
               >
                 {isCapturing ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color="#000" />
                 ) : (
-                  <View style={styles.captureInner} />
+                  <View style={styles.shutterInner} />
                 )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.flipBtn}
-                onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
-              >
-                <Text style={styles.flipBtnText}>🔄</Text>
-              </TouchableOpacity>
+              </Pressable>
+              <View style={styles.galleryBtn} />
             </View>
           </CameraView>
-        </View>
-      </Modal>
-    </View>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+function RoundButton({ icon, onPress }: { icon: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.roundBtn, pressed && { opacity: 0.8 }]}
+    >
+      <Ionicons name={icon} size={22} color="#fff" />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    padding: 14,
-    gap: 8,
-  },
-  buttonIcon: {
-    fontSize: 20,
-  },
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  photoInfo: {
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  photoCount: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
-  previewRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  thumbnail: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-  },
-  cameraContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraControls: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingBottom: 40,
+  container: { flex: 1, backgroundColor: '#000' },
+  camera: { flex: 1, justifyContent: 'space-between' },
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 30,
-    marginBottom: 20,
+    paddingTop: 60,
+    paddingHorizontal: spacing.xl,
   },
-  closeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing['2xl'],
+    paddingBottom: 48,
+  },
+  galleryBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roundBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  closeBtnText: {
-    color: '#fff',
-    fontSize: 20,
-  },
-  captureBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  shutter: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: '#fff',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 4,
     borderColor: 'rgba(255,255,255,0.3)',
   },
-  captureInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+  shutterInner: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: '#d4d4d4',
   },
-  flipBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
+  permGate: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing['2xl'],
   },
-  flipBtnText: {
-    fontSize: 22,
+  permBtn: {
+    marginTop: spacing['2xl'],
+    backgroundColor: '#fff',
+    paddingHorizontal: spacing['2xl'],
+    paddingVertical: spacing.md,
+    borderRadius: 12,
   },
 });

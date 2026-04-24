@@ -1,45 +1,37 @@
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
+import { colors } from '../../src/theme';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#4f46e5',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: colors.brand,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: '#e5e7eb',
-          borderTopWidth: 0.5,
-          paddingTop: 4,
-          paddingBottom: Platform.OS === 'ios' ? 20 : 4,
-          height: Platform.OS === 'ios' ? 84 : 60,
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: -2 },
-              shadowOpacity: 0.06,
-              shadowRadius: 8,
-            },
-            android: {
-              elevation: 8,
-            },
-          }),
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          paddingTop: 6,
+          paddingBottom: Platform.OS === 'ios' ? 22 : 8,
+          height: Platform.OS === 'ios' ? 84 : 64,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          letterSpacing: 0.1,
         },
       }}
     >
       <Tabs.Screen
-        name="schedule"
+        name="home"
         options={{
-          title: 'Schedule',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
+          title: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -47,8 +39,17 @@ export default function TabsLayout() {
         name="jobs"
         options={{
           title: 'Jobs',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'briefcase' : 'briefcase-outline'} size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="schedule"
+        options={{
+          title: 'Schedule',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -56,8 +57,8 @@ export default function TabsLayout() {
         name="inbox"
         options={{
           title: 'Inbox',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -65,8 +66,8 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
           ),
         }}
       />

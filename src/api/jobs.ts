@@ -101,19 +101,24 @@ export async function uploadPhoto(
   caption?: string
 ): Promise<Photo> {
   const formData = new FormData();
-  formData.append('photo', {
+  formData.append('file', {
     uri,
     type: 'image/jpeg',
     name: `photo_${Date.now()}.jpg`,
   } as any);
+  formData.append('category', 'photo');
   if (caption) {
     formData.append('caption', caption);
   }
 
-  const response = await apiClient.post(`/jobs/${jobId}/photos`, formData, {
+  const response = await apiClient.post(`/jobs/${jobId}/attachments`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return unwrap<Photo>(response);
+}
+
+export async function deletePhoto(jobId: number, photoId: number): Promise<void> {
+  await apiClient.delete(`/jobs/${jobId}/attachments/${photoId}`);
 }
 
 // ─── Line Items ──────────────────────────────────────────────────────────────

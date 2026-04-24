@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuthStore } from '../src/store';
+import { colors } from '../src/theme';
 
 export default function RootLayout() {
   const { isAuthenticated, isLoading, loadStoredAuth } = useAuthStore();
@@ -14,7 +15,7 @@ export default function RootLayout() {
   if (isLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
@@ -22,7 +23,7 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         {!isAuthenticated ? (
           <Stack.Screen name="login" />
         ) : (
@@ -41,6 +42,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.bg,
   },
 });

@@ -1,5 +1,6 @@
 import { getQueue, removeFromQueue, isConnected } from './offline';
 import * as jobsApi from '../api/jobs';
+import * as timeApi from '../api/timeTracking';
 
 type SyncResult = { success: number; failed: number };
 
@@ -27,10 +28,10 @@ export async function syncOfflineActions(): Promise<SyncResult> {
           );
           break;
         case 'clock_in':
-          await jobsApi.clockIn(action.payload.jobId as number);
+          await timeApi.clockIn(action.payload.jobId as number);
           break;
         case 'clock_out':
-          await jobsApi.clockOut(action.payload.jobId as number);
+          await timeApi.clockOut();
           break;
         case 'upload_photo':
           await jobsApi.uploadPhoto(

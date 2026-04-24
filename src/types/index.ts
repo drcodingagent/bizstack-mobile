@@ -20,7 +20,7 @@ export interface Client {
 
 // ─── Jobs ────────────────────────────────────────────────────────────────────
 
-export type JobStatus = 'scheduled' | 'en_route' | 'in_progress' | 'completed' | 'cancelled';
+export type JobStatus = 'new' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
 export type PriceType = 'fixed' | 'hourly';
 export type JobType = 'one_off' | 'recurring';

@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuthStore } from '../src/store';
+import { colors } from '../src/theme';
 
 export default function Index() {
   const { isAuthenticated, isLoading, loadStoredAuth } = useAuthStore();
@@ -13,9 +14,8 @@ export default function Index() {
 
   useEffect(() => {
     if (isLoading) return;
-
     if (isAuthenticated) {
-      router.replace('/tabs');
+      router.replace('/tabs/home');
     } else {
       router.replace('/login');
     }
@@ -23,7 +23,7 @@ export default function Index() {
 
   return (
     <View style={styles.loading}>
-      <ActivityIndicator size="large" color="#4f46e5" />
+      <ActivityIndicator size="large" color={colors.brand} />
     </View>
   );
 }
@@ -33,6 +33,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.bg,
   },
 });

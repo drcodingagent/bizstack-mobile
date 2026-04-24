@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Job, JobStatus } from '../types';
+import { Job, JobStatus, Photo } from '../types';
 import * as jobsApi from '../api/jobs';
 import { addToQueue, isConnected, getQueueLength } from '../utils/offline';
 import { syncOfflineActions } from '../utils/sync';
@@ -7,6 +7,7 @@ import { syncOfflineActions } from '../utils/sync';
 interface JobState {
   jobs: Job[];
   selectedJob: Job | null;
+  photos: Photo[];
   isLoading: boolean;
   isOffline: boolean;
   pendingActions: number;
@@ -14,6 +15,7 @@ interface JobState {
 
   fetchJobs: (date?: string) => Promise<void>;
   fetchJob: (id: number) => Promise<void>;
+  fetchPhotos: (jobId: number) => Promise<void>;
   updateStatus: (jobId: number, status: JobStatus) => Promise<void>;
   startJob: (jobId: number) => Promise<void>;
   completeJob: (jobId: number) => Promise<void>;
@@ -22,6 +24,7 @@ interface JobState {
   signoffJob: (jobId: number, signature: string, rating: number, feedback?: string) => Promise<void>;
   completeTask: (jobId: number, taskId: number) => Promise<void>;
   uploadPhoto: (jobId: number, uri: string, caption?: string) => Promise<void>;
+  deletePhoto: (jobId: number, photoId: number) => Promise<void>;
   uploadSignature: (jobId: number, base64: string) => Promise<void>;
   syncQueue: () => Promise<void>;
   refreshPendingCount: () => Promise<void>;
@@ -31,6 +34,7 @@ interface JobState {
 export const useJobStore = create<JobState>((set, get) => ({
   jobs: [],
   selectedJob: null,
+  photos: [],
   isLoading: false,
   isOffline: false,
   pendingActions: 0,
@@ -64,6 +68,15 @@ export const useJobStore = create<JobState>((set, get) => ({
       set({ isOffline: true });
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  fetchPhotos: async (jobId: number) => {
+    try {
+      const photos = await jobsApi.getJobPhotos(jobId);
+      set({ photos });
+    } catch {
+      set({ photos: [] });
     }
   },
 
@@ -224,6 +237,7 @@ export const useJobStore = create<JobState>((set, get) => ({
       const online = await isConnected();
       if (online) {
         await jobsApi.uploadPhoto(jobId, uri, caption);
+        await get().fetchPhotos(jobId);
       } else {
         await addToQueue({ type: 'upload_photo', payload: { jobId, uri, caption } });
         const count = await getQueueLength();
@@ -233,6 +247,16 @@ export const useJobStore = create<JobState>((set, get) => ({
       await addToQueue({ type: 'upload_photo', payload: { jobId, uri, caption } });
       const count = await getQueueLength();
       set({ pendingActions: count });
+    }
+  },
+
+  deletePhoto: async (jobId: number, photoId: number) => {
+    set((s) => ({ photos: s.photos.filter((p) => p.id !== photoId) }));
+    try {
+      await jobsApi.deletePhoto(jobId, photoId);
+    } catch {
+      // Re-fetch on failure so UI reflects server truth.
+      await get().fetchPhotos(jobId);
     }
   },
 

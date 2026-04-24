@@ -1,99 +1,46 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
   ActivityIndicator,
-  TouchableOpacity,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Screen, Text } from '../../src/components/ui';
 import { Conversation } from '../../src/types';
 import { getConversations, getUnreadCount } from '../../src/api/inbox';
+import { colors, radii, spacing } from '../../src/theme';
 
 type Filter = 'all' | 'unread' | 'job' | 'client';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'unread', label: 'Unread' },
-  { key: 'job', label: 'Job-related' },
-  { key: 'client', label: 'Client' },
+  { key: 'job', label: 'Jobs' },
+  { key: 'client', label: 'Clients' },
 ];
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function timeAgo(iso: string): string {
   const now = Date.now();
   const then = new Date(iso).getTime();
   const diff = Math.floor((now - then) / 1000);
   if (diff < 60) return 'Just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
 }
 
-function getChannelIcon(channel: string): string {
+function channelIcon(channel: string): keyof typeof Ionicons.glyphMap {
   switch (channel) {
-    case 'sms': return '💬';
-    case 'email': return '📧';
-    case 'internal': return '🏢';
-    default: return '💬';
+    case 'sms': return 'chatbubble-ellipses-outline';
+    case 'email': return 'mail-outline';
+    case 'internal': return 'business-outline';
+    default: return 'chatbubble-ellipses-outline';
   }
 }
-
-// ─── Conversation Card ──────────────────────────────────────────────────────
-
-function ConversationCard({ conversation }: { conversation: Conversation }) {
-  const hasUnread = conversation.unread_count > 0;
-  const preview = conversation.last_message?.body || 'No messages yet';
-  const time = conversation.last_message?.created_at;
-
-  return (
-    <TouchableOpacity style={styles.convCard} activeOpacity={0.7}>
-      <View style={styles.convLeft}>
-        <View style={[styles.convIcon, hasUnread && styles.convIconUnread]}>
-          <Text style={styles.convIconText}>
-            {getChannelIcon(conversation.channel)}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.convCenter}>
-        <View style={styles.convTopRow}>
-          <Text
-            style={[styles.convSubject, hasUnread && styles.convSubjectUnread]}
-            numberOfLines={1}
-          >
-            {conversation.subject}
-          </Text>
-          {time && (
-            <Text style={styles.convTime}>{timeAgo(time)}</Text>
-          )}
-        </View>
-        <Text style={styles.convClient} numberOfLines={1}>
-          {conversation.client.name}
-        </Text>
-        <Text
-          style={[styles.convPreview, hasUnread && styles.convPreviewUnread]}
-          numberOfLines={1}
-        >
-          {conversation.last_message?.sender ? `${conversation.last_message.sender}: ` : ''}
-          {preview}
-        </Text>
-      </View>
-      {hasUnread && (
-        <View style={styles.unreadBadge}>
-          <Text style={styles.unreadBadgeText}>
-            {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-}
-
-// ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function InboxScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -108,22 +55,20 @@ export default function InboxScreen() {
       setError(null);
       const params: Record<string, string> = {};
       if (filter === 'unread') params.filter = 'unread';
-      if (filter === 'jobs') params.context_type = 'Job';
-
-      const data = await getConversations(params);
-      setConversations(data);
-      const count = await getUnreadCount();
+      const [list, count] = await Promise.all([getConversations(params), getUnreadCount()]);
+      setConversations(list);
       setUnreadCount(count);
-    } catch (err) {
-      setError('Failed to load messages');
+    } catch {
+      setError('Could not load messages.');
       setConversations([]);
     }
   }, [filter]);
 
-  useEffect(() => {
-    fetchData();
-    setIsLoading(false);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData().finally(() => setIsLoading(false));
+    }, [fetchData])
+  );
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -131,11 +76,7 @@ export default function InboxScreen() {
     setIsRefreshing(false);
   }, [fetchData]);
 
-  const handleFilterChange = (newFilter: Filter) => {
-    setFilter(newFilter);
-  };
-
-  const filteredConversations = conversations.filter((c) => {
+  const filtered = conversations.filter((c) => {
     switch (filter) {
       case 'unread': return c.unread_count > 0;
       case 'job': return c.context_type === 'Job';
@@ -145,268 +86,243 @@ export default function InboxScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+    <Screen>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Inbox</Text>
+        <View>
+          <Text variant="caption" color={colors.textTertiary}>
+            INBOX
+          </Text>
+          <Text variant="h1" style={{ marginTop: 2 }}>
+            Messages
+          </Text>
+        </View>
         {unreadCount > 0 && (
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>{unreadCount}</Text>
+          <View style={styles.unreadPill}>
+            <Text variant="caption" color={colors.onBrand} style={{ fontWeight: '700' }}>
+              {unreadCount} new
+            </Text>
           </View>
         )}
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.filterRow}>
-        {FILTERS.map((f) => (
-          <TouchableOpacity
-            key={f.key}
-            style={[styles.filterBtn, filter === f.key && styles.filterBtnActive]}
-            onPress={() => handleFilterChange(f.key)}
-          >
-            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <FlatList
+        data={FILTERS}
+        keyExtractor={(f) => f.key}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterBar}
+        renderItem={({ item: f }) => {
+          const active = filter === f.key;
+          return (
+            <Pressable
+              onPress={() => setFilter(f.key)}
+              style={[styles.chip, active && styles.chipActive]}
+            >
+              <Text
+                variant="caption"
+                color={active ? colors.onBrand : colors.textSecondary}
+                style={{ fontWeight: '600' }}
+              >
+                {f.label}
+              </Text>
+            </Pressable>
+          );
+        }}
+        style={{ flexGrow: 0 }}
+      />
 
-      {/* Conversation List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4f46e5" />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       ) : error ? (
-        <View style={styles.errorContainer}>
-          <Ionicons name="cloud-offline" size={48} color="#d1d5db" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </TouchableOpacity>
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={40} color={colors.textTertiary} />
+          <Text variant="body" color={colors.textSecondary} style={{ marginTop: spacing.md }}>
+            {error}
+          </Text>
+          <Pressable onPress={fetchData} style={styles.retry}>
+            <Text variant="bodyStrong" color={colors.onBrand}>Retry</Text>
+          </Pressable>
         </View>
       ) : (
         <FlatList
-          data={filteredConversations}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => <ConversationCard conversation={item} />}
+          data={filtered}
+          keyExtractor={(c) => String(c.id)}
+          renderItem={({ item }) => <Row conversation={item} />}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4f46e5" />
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.brand} />
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📭</Text>
-              <Text style={styles.emptyTitle}>No messages yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Messages from clients and the office will appear here
+              <View style={styles.emptyCircle}>
+                <Ionicons name="chatbubble-outline" size={24} color={colors.textTertiary} />
+              </View>
+              <Text variant="h3" style={{ marginTop: spacing.md }}>
+                No messages
+              </Text>
+              <Text variant="bodySm" color={colors.textSecondary} style={{ marginTop: 2 }}>
+                Client and office messages will show here.
               </Text>
             </View>
           }
         />
       )}
-    </SafeAreaView>
+    </Screen>
   );
 }
 
-// ─── Styles ────────────────────────────────────────────────────────────────
+function Row({ conversation }: { conversation: Conversation }) {
+  const hasUnread = conversation.unread_count > 0;
+  const preview = conversation.last_message?.body || 'No messages yet';
+  const time = conversation.last_message?.created_at;
+
+  return (
+    <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}>
+      <View style={[styles.avatar, hasUnread && styles.avatarUnread]}>
+        <Ionicons
+          name={channelIcon(conversation.channel)}
+          size={18}
+          color={hasUnread ? colors.brand : colors.textSecondary}
+        />
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={styles.rowHeader}>
+          <Text
+            variant={hasUnread ? 'bodyStrong' : 'body'}
+            numberOfLines={1}
+            style={{ flex: 1 }}
+          >
+            {conversation.subject}
+          </Text>
+          {time && (
+            <Text variant="caption" color={colors.textTertiary}>
+              {timeAgo(time)}
+            </Text>
+          )}
+        </View>
+        <Text variant="bodySm" color={colors.textSecondary} numberOfLines={1}>
+          {conversation.client.name}
+        </Text>
+        <Text
+          variant="bodySm"
+          color={hasUnread ? colors.textPrimary : colors.textTertiary}
+          numberOfLines={1}
+          style={{ marginTop: 2 }}
+        >
+          {conversation.last_message?.sender
+            ? `${conversation.last_message.sender}: `
+            : ''}
+          {preview}
+        </Text>
+      </View>
+      {hasUnread && (
+        <View style={styles.unreadDot}>
+          <Text variant="caption" color={colors.onBrand} style={{ fontWeight: '700' }}>
+            {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
   header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    gap: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-    letterSpacing: -0.5,
+  unreadPill: {
+    backgroundColor: colors.brand,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
   },
-  headerBadge: {
-    backgroundColor: '#dc2626',
-    borderRadius: 10,
-    minWidth: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
+  filterBar: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
   },
-  headerBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  // Filters
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    gap: 8,
-  },
-  filterBtn: {
+  chip: {
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
-  filterBtnActive: {
-    backgroundColor: '#4f46e5',
+  chipActive: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
   },
-  filterText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
-  filterTextActive: {
-    color: '#fff',
-  },
-
-  // List
   list: {
-    paddingBottom: 24,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['3xl'],
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Conversation Card
-  convCard: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginVertical: 3,
-    borderRadius: 12,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
-  convLeft: {
-    marginRight: 12,
+  rowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  convIcon: {
+  avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarUnread: {
+    backgroundColor: colors.brandSoft,
+  },
+  unreadDot: {
+    backgroundColor: colors.brand,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
-  },
-  convIconUnread: {
-    backgroundColor: '#ede9fe',
-  },
-  convIconText: {
-    fontSize: 18,
-  },
-  convCenter: {
-    flex: 1,
-    marginRight: 8,
-  },
-  convTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 1,
-  },
-  convSubject: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-    marginRight: 8,
-  },
-  convSubjectUnread: {
-    fontWeight: '700',
-  },
-  convTime: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-  convClient: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  convPreview: {
-    fontSize: 13,
-    color: '#9ca3af',
-  },
-  convPreviewUnread: {
-    color: '#6b7280',
-    fontWeight: '500',
-  },
-  unreadBadge: {
-    backgroundColor: '#4f46e5',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
     justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: 5,
   },
-  unreadBadgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  // Error
-  errorContainer: {
+  center: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 32,
+    justifyContent: 'center',
+    gap: spacing.md,
   },
-  errorText: {
-    fontSize: 15,
-    color: '#6b7280',
-    textAlign: 'center',
+  retry: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.brand,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
   },
-  retryBtn: {
-    backgroundColor: '#4f46e5',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-  },
-  retryBtnText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-
-  // Empty
   empty: {
     alignItems: 'center',
-    paddingTop: 80,
-    paddingHorizontal: 32,
+    paddingTop: spacing['4xl'],
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textAlign: 'center',
+  emptyCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
