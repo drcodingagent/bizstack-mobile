@@ -7,11 +7,12 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen, Text } from '../../src/components/ui';
 import { Conversation } from '../../src/types';
 import { getConversations, getUnreadCount } from '../../src/api/inbox';
+import { useInboxStore } from '../../src/store/inboxStore';
 import { colors, radii, spacing } from '../../src/theme';
 
 type Filter = 'all' | 'unread' | 'job' | 'client';
@@ -43,6 +44,8 @@ function channelIcon(channel: string): keyof typeof Ionicons.glyphMap {
 }
 
 export default function InboxScreen() {
+  const router = useRouter();
+  const refreshUnread = useInboxStore((s) => s.refreshUnread);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +61,7 @@ export default function InboxScreen() {
       const [list, count] = await Promise.all([getConversations(params), getUnreadCount()]);
       setConversations(list);
       setUnreadCount(count);
+      refreshUnread();
     } catch {
       setError('Could not load messages.');
       setConversations([]);
@@ -149,7 +153,9 @@ export default function InboxScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(c) => String(c.id)}
-          renderItem={({ item }) => <Row conversation={item} />}
+          renderItem={({ item }) => (
+            <Row conversation={item} onPress={() => router.push(`/inbox/${item.id}`)} />
+          )}
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           contentContainerStyle={styles.list}
           refreshControl={
@@ -174,13 +180,13 @@ export default function InboxScreen() {
   );
 }
 
-function Row({ conversation }: { conversation: Conversation }) {
+function Row({ conversation, onPress }: { conversation: Conversation; onPress: () => void }) {
   const hasUnread = conversation.unread_count > 0;
   const preview = conversation.last_message?.body || 'No messages yet';
   const time = conversation.last_message?.created_at;
 
   return (
-    <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}>
       <View style={[styles.avatar, hasUnread && styles.avatarUnread]}>
         <Ionicons
           name={channelIcon(conversation.channel)}

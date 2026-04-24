@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   View,
 } from 'react-native';
@@ -45,6 +46,7 @@ export default function JobDetailScreen() {
     completeTask,
     uploadPhoto,
     uploadSignature,
+    updateStatus,
     startJob,
     completeJob,
     sendOnMyWay,
@@ -85,7 +87,7 @@ export default function JobDetailScreen() {
   const handleEmail = () => {
     if (job.client.email) Linking.openURL(`mailto:${job.client.email}`);
   };
-  const handleNavigate = () => {
+  const openMaps = () => {
     const q = encodeURIComponent(addressLine);
     const url = Platform.select({
       ios: `maps://maps.apple.com/?q=${q}`,
@@ -93,6 +95,37 @@ export default function JobDetailScreen() {
       default: `https://maps.google.com/?q=${q}`,
     });
     Linking.openURL(url!);
+  };
+
+  const handleNavigate = () => {
+    const canSetEnRoute =
+      job.status === 'scheduled' || job.status === 'new';
+    if (canSetEnRoute) {
+      Alert.alert(
+        'Start driving?',
+        'Mark this job as "En Route" and open navigation.',
+        [
+          { text: 'Just navigate', onPress: openMaps },
+          {
+            text: 'En Route + Navigate',
+            onPress: async () => {
+              await updateStatus(jobId, 'in_progress');
+              openMaps();
+            },
+          },
+        ]
+      );
+    } else {
+      openMaps();
+    }
+  };
+
+  const handleSharePhoto = async (url: string) => {
+    try {
+      await Share.share({ url, message: `Photo from job #${job.job_number}` });
+    } catch {
+      // user cancelled
+    }
   };
 
   const handleOnMyWay = async () => {
@@ -313,10 +346,15 @@ export default function JobDetailScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: spacing.sm }}
               renderItem={({ item }) => (
-                <Image
-                  source={{ uri: item.thumbnail_url || item.url }}
-                  style={styles.photo}
-                />
+                <Pressable
+                  onLongPress={() => handleSharePhoto(item.url)}
+                  delayLongPress={300}
+                >
+                  <Image
+                    source={{ uri: item.thumbnail_url || item.url }}
+                    style={styles.photo}
+                  />
+                </Pressable>
               )}
             />
           )}

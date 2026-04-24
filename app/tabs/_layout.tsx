@@ -1,10 +1,57 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { colors } from '../../src/theme';
+import { useInboxStore } from '../../src/store/inboxStore';
+
+function InboxIcon({ color, focused }: { color: string; focused: boolean }) {
+  const unread = useInboxStore((s) => s.unreadCount);
+  return (
+    <View style={{ width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }}>
+      <Ionicons
+        name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+        size={22}
+        color={color}
+      />
+      {unread > 0 && (
+        <View style={badge.dot}>
+          <View style={badge.inner} />
+        </View>
+      )}
+    </View>
+  );
+}
+
+const badge = StyleSheet.create({
+  dot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inner: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+  },
+});
 
 export default function TabsLayout() {
+  const refreshUnread = useInboxStore((s) => s.refreshUnread);
+
+  useEffect(() => {
+    refreshUnread();
+    const interval = setInterval(refreshUnread, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <Tabs
       screenOptions={{
@@ -58,7 +105,7 @@ export default function TabsLayout() {
         options={{
           title: 'Inbox',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={22} color={color} />
+            <InboxIcon color={color} focused={focused} />
           ),
         }}
       />

@@ -8,9 +8,12 @@ export async function getConversations(filter?: Record<string, string>): Promise
   return response.data?.conversations ?? [];
 }
 
-export async function getConversation(id: number): Promise<Conversation> {
+export async function getConversation(id: number): Promise<{ conversation: Conversation; messages: Message[] }> {
   const response = await apiClient.get(`/inbox/${id}`);
-  return response.data?.conversation;
+  return {
+    conversation: response.data?.conversation,
+    messages: response.data?.messages ?? [],
+  };
 }
 
 export async function createConversation(data: {
@@ -27,11 +30,6 @@ export async function createConversation(data: {
 
 // ─── Messages ────────────────────────────────────────────────────────────────
 
-export async function getMessages(conversationId: number): Promise<Message[]> {
-  const response = await apiClient.get(`/inbox/${conversationId}/messages`);
-  return response.data?.messages ?? [];
-}
-
 export async function sendMessage(
   conversationId: number,
   body: string,
@@ -44,21 +42,21 @@ export async function sendMessage(
       formData.append(`attachments[${index}]`, file as any);
     });
     const response = await apiClient.post(
-      `/inbox/${conversationId}/messages`,
+      `/inbox/${conversationId}/create_message`,
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     );
     return response.data?.message;
   }
 
-  const response = await apiClient.post(`/inbox/${conversationId}/messages`, { body });
+  const response = await apiClient.post(`/inbox/${conversationId}/create_message`, { body });
   return response.data?.message;
 }
 
 // ─── Read Status ─────────────────────────────────────────────────────────────
 
 export async function markRead(conversationId: number): Promise<void> {
-  await apiClient.patch(`/inbox/${conversationId}/read`);
+  await apiClient.patch(`/inbox/${conversationId}/mark_read`);
 }
 
 export async function getUnreadCount(): Promise<number> {
