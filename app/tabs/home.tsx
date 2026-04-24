@@ -14,7 +14,7 @@ import { Screen, Text, Card, Pill, IconButton } from '../../src/components/ui';
 import { ClockCard } from '../../src/components/ClockCard';
 import { useTimeStore } from '../../src/store/timeStore';
 import { useJobStore } from '../../src/store/jobStore';
-import { useAuthStore } from '../../src/store';
+import { useAuthStore, useFeature } from '../../src/store';
 import { Job } from '../../src/types';
 import { colors, radii, shadows, spacing } from '../../src/theme';
 import { jobStatusColor, jobStatusLabel } from '../../src/theme';
@@ -36,13 +36,16 @@ export default function HomeScreen() {
   const { user } = useAuthStore();
   const { summary, fetchSummary } = useTimeStore();
   const { jobs, fetchJobs } = useJobStore();
+  const timeTrackingEnabled = useFeature('time_tracking');
   const [refreshing, setRefreshing] = useState(false);
 
   const todayISO = getTodayISO();
 
   const load = useCallback(async () => {
-    await Promise.all([fetchSummary(), fetchJobs(todayISO)]);
-  }, [todayISO]);
+    const tasks: Promise<unknown>[] = [fetchJobs(todayISO)];
+    if (timeTrackingEnabled) tasks.push(fetchSummary());
+    await Promise.all(tasks);
+  }, [todayISO, timeTrackingEnabled]);
 
   useFocusEffect(
     useCallback(() => {
@@ -90,10 +93,20 @@ export default function HomeScreen() {
               {greeting(user?.first_name)}
             </Text>
 
-            <View style={{ height: spacing.xl }} />
-            <ClockCard />
+            {timeTrackingEnabled && (
+              <>
+                <View style={{ height: spacing.xl }} />
+                <ClockCard />
+              </>
+            )}
 
-            <StatsRow total={todays.length} done={done} remaining={remaining} weekHours={weekHours} />
+            <StatsRow
+              total={todays.length}
+              done={done}
+              remaining={remaining}
+              weekHours={weekHours}
+              showWeekHours={timeTrackingEnabled}
+            />
 
             {nextJob && (
               <NextUpCard
@@ -143,11 +156,13 @@ function StatsRow({
   done,
   remaining,
   weekHours,
+  showWeekHours,
 }: {
   total: number;
   done: number;
   remaining: number;
   weekHours: number;
+  showWeekHours: boolean;
 }) {
   return (
     <View style={styles.stats}>
@@ -156,8 +171,12 @@ function StatsRow({
       <Stat value={String(done)} label="Done" color={colors.success} />
       <StatDivider />
       <Stat value={String(remaining)} label="Left" color={colors.brand} />
-      <StatDivider />
-      <Stat value={`${weekHours}h`} label="Week" />
+      {showWeekHours && (
+        <>
+          <StatDivider />
+          <Stat value={`${weekHours}h`} label="Week" />
+        </>
+      )}
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User } from '../types';
 import * as authApi from '../api/auth';
+import { useFeaturesStore } from './featuresStore';
 
 interface AuthState {
   user: User | null;
@@ -22,10 +23,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email: string, password: string) => {
     const { token, user } = await authApi.login(email, password);
     set({ user, token, isAuthenticated: true });
+    await useFeaturesStore.getState().loadFeatures();
   },
 
   logout: async () => {
     await authApi.logout();
+    useFeaturesStore.getState().clearFeatures();
     set({ user: null, token: null, isAuthenticated: false });
   },
 
@@ -35,6 +38,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const stored = await authApi.getStoredAuth();
       if (stored) {
         set({ user: stored.user, token: stored.token, isAuthenticated: true });
+        await useFeaturesStore.getState().loadFeatures();
       }
     } catch {
       // Stored auth invalid

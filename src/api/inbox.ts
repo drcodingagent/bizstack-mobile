@@ -1,21 +1,16 @@
 import apiClient from './client';
 import { Conversation, Message } from '../types';
 
-// Helper to unwrap Rails API response { success, data, message }
-function unwrap<T>(response: { data: any }): T {
-  return (response.data?.data ?? response.data) as T;
-}
-
 // ─── Conversations ───────────────────────────────────────────────────────────
 
 export async function getConversations(filter?: Record<string, string>): Promise<Conversation[]> {
   const response = await apiClient.get('/inbox', { params: filter || {} });
-  return unwrap<Conversation[]>(response);
+  return response.data?.conversations ?? [];
 }
 
 export async function getConversation(id: number): Promise<Conversation> {
   const response = await apiClient.get(`/inbox/${id}`);
-  return unwrap<Conversation>(response);
+  return response.data?.conversation;
 }
 
 export async function createConversation(data: {
@@ -27,14 +22,14 @@ export async function createConversation(data: {
   channel?: string;
 }): Promise<Conversation> {
   const response = await apiClient.post('/inbox', { conversation: data });
-  return unwrap<Conversation>(response);
+  return response.data?.conversation;
 }
 
 // ─── Messages ────────────────────────────────────────────────────────────────
 
 export async function getMessages(conversationId: number): Promise<Message[]> {
   const response = await apiClient.get(`/inbox/${conversationId}/messages`);
-  return unwrap<Message[]>(response);
+  return response.data?.messages ?? [];
 }
 
 export async function sendMessage(
@@ -53,11 +48,11 @@ export async function sendMessage(
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     );
-    return unwrap<Message>(response);
+    return response.data?.message;
   }
 
   const response = await apiClient.post(`/inbox/${conversationId}/messages`, { body });
-  return unwrap<Message>(response);
+  return response.data?.message;
 }
 
 // ─── Read Status ─────────────────────────────────────────────────────────────

@@ -26,9 +26,6 @@ apiClient.interceptors.request.use(
     const token = await SecureStore.getItemAsync('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('[API] Token attached, length:', token.length);
-    } else {
-      console.log('[API] WARNING: No auth_token in SecureStore');
     }
     return config;
   },
@@ -40,7 +37,6 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      console.log('[API] 401 Unauthorized - deleting token');
       await SecureStore.deleteItemAsync('auth_token');
     }
     return Promise.reject(error);

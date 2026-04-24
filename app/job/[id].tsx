@@ -13,6 +13,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJobStore } from '../../src/store/jobStore';
+import { useFeature } from '../../src/store';
 import { Job, JobStatus, Task } from '../../src/types';
 import { Screen, Text, Pill, Button, Card, IconButton } from '../../src/components/ui';
 import { ClockCard } from '../../src/components/ClockCard';
@@ -53,6 +54,7 @@ export default function JobDetailScreen() {
   const [showCamera, setShowCamera] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const timeTrackingEnabled = useFeature('time_tracking');
 
   useEffect(() => {
     if (!jobId) return;
@@ -250,14 +252,16 @@ export default function JobDetailScreen() {
         ) : null}
 
         {/* Clock */}
-        <Section label="Time">
-          <ClockCard
-            jobId={job.id}
-            jobTitle={job.title}
-            jobNumber={job.job_number}
-            compact
-          />
-        </Section>
+        {timeTrackingEnabled && (
+          <Section label="Time">
+            <ClockCard
+              jobId={job.id}
+              jobTitle={job.title}
+              jobNumber={job.job_number}
+              compact
+            />
+          </Section>
+        )}
 
         {/* Tasks */}
         {job.tasks.length > 0 && (

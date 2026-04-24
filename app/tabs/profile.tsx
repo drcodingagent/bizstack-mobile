@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../src/store';
+import { useAuthStore, useFeature } from '../../src/store';
 import { useTimeStore } from '../../src/store/timeStore';
 import { Screen, Text } from '../../src/components/ui';
 import { colors, radii, shadows, spacing } from '../../src/theme';
@@ -23,6 +23,7 @@ interface MenuItem {
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
   const { summary } = useTimeStore();
+  const timeTrackingEnabled = useFeature('time_tracking');
   const router = useRouter();
 
   const handleLogout = () => {
@@ -40,7 +41,9 @@ export default function ProfileScreen() {
   };
 
   const menuItems: MenuItem[] = [
-    { icon: 'time-outline', label: 'My time cards', onPress: () => {} },
+    ...(timeTrackingEnabled
+      ? [{ icon: 'time-outline' as const, label: 'My time cards', onPress: () => {} }]
+      : []),
     { icon: 'settings-outline', label: 'Settings', onPress: () => {} },
     { icon: 'help-circle-outline', label: 'Help & support', onPress: () => {} },
     {
@@ -87,14 +90,16 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <View style={styles.stats}>
-          <Stat value={`${summary?.week_hours ?? 0}h`} label="This week" />
-          <StatDivider />
-          <Stat
-            value={String(summary?.today_clocks?.length ?? 0)}
-            label="Shifts today"
-          />
-        </View>
+        {timeTrackingEnabled && (
+          <View style={styles.stats}>
+            <Stat value={`${summary?.week_hours ?? 0}h`} label="This week" />
+            <StatDivider />
+            <Stat
+              value={String(summary?.today_clocks?.length ?? 0)}
+              label="Shifts today"
+            />
+          </View>
+        )}
 
         <View style={styles.menu}>
           {menuItems.map((item, i) => (

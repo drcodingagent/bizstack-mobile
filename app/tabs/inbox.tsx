@@ -203,9 +203,11 @@ function Row({ conversation }: { conversation: Conversation }) {
             </Text>
           )}
         </View>
+        {conversation.client && (
         <Text variant="bodySm" color={colors.textSecondary} numberOfLines={1}>
           {conversation.client.name}
         </Text>
+        )}
         <Text
           variant="bodySm"
           color={hasUnread ? colors.textPrimary : colors.textTertiary}
